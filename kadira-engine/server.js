@@ -31,6 +31,14 @@ http.createServer(app).listen(port);
 //connect to mongo
 var DBS = {};
 
+const {
+  RATE_LIMIT_REQUESTS_PER_SECOND: limit = 30,
+  RATE_LIMIT_RESET_INTERVAL: resetInterval = 1000,
+  RATE_LIMIT_TOTAL_TRACES: limitTotalTraces = 100
+} = process.env || {};
+
+const rateLimitConfig = { limit, resetInterval, limitTotalTraces }
+
 MongoCluster.initFromEnv(function(err, cluster) {
   console.log('DDONE')
   if(err) {
@@ -59,11 +67,7 @@ function afterMongoURLConnected(err, db) {
     // rate limit all requests from this point
     // limit => 15 req/s, traces => 100 traces/request
     // Note: Drops all requests without an appId.
-    app.use(require('./lib/middlewares/ratelimit')({
-      limit: 15,
-      resetInterval: 1000,
-      limitTotalTraces: 100
-    }));
+    app.use(require('./lib/middlewares/ratelimit')(rateLimitConfig));
 
     // error manager handles errors sent from client (GET and POST)
     // all requests sent to /errors are considered as client side errors
